@@ -1,0 +1,119 @@
+import { useState } from 'react';
+import { Layout } from '@/components/layout/Layout';
+import { RoomCard } from '@/components/rooms/RoomCard';
+import { mockRooms } from '@/data/mockData';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { motion } from 'framer-motion';
+import { RoomStatus } from '@/types';
+
+const Rooms = () => {
+  const [filterStatus, setFilterStatus] = useState<RoomStatus | 'all'>('all');
+  const [filterType, setFilterType] = useState<string>('all');
+
+  const filteredRooms = mockRooms.filter((room) => {
+    if (filterStatus !== 'all' && room.status !== filterStatus) return false;
+    if (filterType !== 'all' && room.type !== filterType) return false;
+    return true;
+  });
+
+  const roomTypes = ['all', 'single', 'double', 'suite', 'deluxe'];
+  const statusFilters: (RoomStatus | 'all')[] = ['all', 'available', 'occupied', 'reserved', 'cleaning'];
+
+  return (
+    <Layout>
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <div className="bg-hero-gradient py-12">
+          <div className="container px-4">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center"
+            >
+              <h1 className="font-display text-4xl font-bold text-primary-foreground md:text-5xl">
+                Our Rooms
+              </h1>
+              <p className="mt-4 text-lg text-primary-foreground/80">
+                Find your perfect accommodation
+              </p>
+            </motion.div>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="border-b border-border bg-card py-4">
+          <div className="container px-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              {/* Room Type Filter */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground">Type:</span>
+                {roomTypes.map((type) => (
+                  <Button
+                    key={type}
+                    variant={filterType === type ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setFilterType(type)}
+                    className="capitalize"
+                  >
+                    {type}
+                  </Button>
+                ))}
+              </div>
+
+              {/* Status Filter */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground">Status:</span>
+                {statusFilters.map((status) => (
+                  <Badge
+                    key={status}
+                    variant={
+                      filterStatus === status
+                        ? status === 'all'
+                          ? 'default'
+                          : status
+                        : 'outline'
+                    }
+                    className="cursor-pointer capitalize transition-all hover:scale-105"
+                    onClick={() => setFilterStatus(status)}
+                  >
+                    {status}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Rooms Grid */}
+        <div className="container px-4 py-12">
+          {filteredRooms.length > 0 ? (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredRooms.map((room, index) => (
+                <RoomCard key={room.id} room={room} index={index} />
+              ))}
+            </div>
+          ) : (
+            <div className="py-20 text-center">
+              <p className="text-lg text-muted-foreground">
+                No rooms match your filters
+              </p>
+              <Button
+                variant="outline"
+                className="mt-4"
+                onClick={() => {
+                  setFilterStatus('all');
+                  setFilterType('all');
+                }}
+              >
+                Clear Filters
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    </Layout>
+  );
+};
+
+export default Rooms;
