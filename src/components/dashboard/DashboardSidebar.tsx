@@ -6,13 +6,14 @@ import {
   BedDouble,
   Users,
   CalendarCheck,
-  Key,
   Bell,
   Settings,
   LogOut,
   BarChart3,
   Shield,
   Clock,
+  CreditCard,
+  PlusCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -27,21 +28,23 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', href: '', icon: LayoutDashboard },
   { label: 'Rooms', href: '/rooms', icon: BedDouble },
   { label: 'Bookings', href: '/bookings', icon: CalendarCheck },
-  { label: 'Guests', href: '/guests', icon: Users },
-  { label: 'Access Logs', href: '/access-logs', icon: Clock },
+  { label: 'Payments', href: '/payments', icon: CreditCard },
   { label: 'Alerts', href: '/alerts', icon: Bell },
   { label: 'Revenue', href: '/revenue', icon: BarChart3, ownerOnly: true },
   { label: 'Access Control', href: '/access-control', icon: Shield, ownerOnly: true },
+  { label: 'Add Room', href: '/add-room', icon: PlusCircle, ownerOnly: true },
 ];
 
 export const DashboardSidebar = () => {
-  const { user, logout } = useAuth();
+  const { user, role, signOut } = useAuth();
   const location = useLocation();
-  const basePath = user?.role === 'owner' ? '/owner' : '/receptionist';
+  const basePath = role === 'owner' ? '/owner' : '/receptionist';
 
   const filteredNavItems = navItems.filter(
-    (item) => !item.ownerOnly || user?.role === 'owner'
+    (item) => !item.ownerOnly || role === 'owner'
   );
+
+  const displayName = user?.email?.split('@')[0] || 'User';
 
   return (
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col bg-sidebar text-sidebar-foreground">
@@ -82,13 +85,13 @@ export const DashboardSidebar = () => {
         <div className="mb-3 flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sidebar-accent">
             <span className="text-sm font-medium">
-              {user?.name?.charAt(0).toUpperCase()}
+              {displayName.charAt(0).toUpperCase()}
             </span>
           </div>
           <div className="flex-1 overflow-hidden">
-            <p className="truncate text-sm font-medium">{user?.name}</p>
+            <p className="truncate text-sm font-medium">{displayName}</p>
             <p className="truncate text-xs capitalize text-sidebar-foreground/60">
-              {user?.role}
+              {role}
             </p>
           </div>
         </div>
@@ -101,8 +104,8 @@ export const DashboardSidebar = () => {
             Settings
           </Link>
           <button
-            onClick={() => {
-              logout();
+            onClick={async () => {
+              await signOut();
               window.location.href = '/';
             }}
             className="flex items-center justify-center rounded-lg bg-destructive/20 px-3 py-2 text-destructive transition-colors hover:bg-destructive/30"
