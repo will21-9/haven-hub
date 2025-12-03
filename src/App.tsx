@@ -22,6 +22,8 @@ import Alerts from "./pages/receptionist/Alerts";
 import OwnerDashboard from "./pages/owner/OwnerDashboard";
 import AccessControl from "./pages/owner/AccessControl";
 import Revenue from "./pages/owner/Revenue";
+import AddRoom from "./pages/owner/AddRoom";
+import Payments from "./pages/receptionist/Payments";
 
 const queryClient = new QueryClient();
 
@@ -33,13 +35,13 @@ const ProtectedRoute = ({
   children: React.ReactNode;
   allowedRoles: string[];
 }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { role, isAuthenticated } = useAuth();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  if (!allowedRoles.includes(user?.role || '')) {
+  if (!allowedRoles.includes(role || '')) {
     return <Navigate to="/" replace />;
   }
 
@@ -81,23 +83,15 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/receptionist/payments"
+        element={
+          <ProtectedRoute allowedRoles={['receptionist', 'owner']}>
+            <Payments />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/receptionist/alerts"
-        element={
-          <ProtectedRoute allowedRoles={['receptionist', 'owner']}>
-            <Alerts />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/receptionist/guests"
-        element={
-          <ProtectedRoute allowedRoles={['receptionist', 'owner']}>
-            <ManageBookings />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/receptionist/access-logs"
         element={
           <ProtectedRoute allowedRoles={['receptionist', 'owner']}>
             <Alerts />
@@ -167,6 +161,22 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={['owner']}>
             <AccessControl />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/owner/add-room"
+        element={
+          <ProtectedRoute allowedRoles={['owner']}>
+            <AddRoom />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/owner/payments"
+        element={
+          <ProtectedRoute allowedRoles={['owner']}>
+            <Payments />
           </ProtectedRoute>
         }
       />

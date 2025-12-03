@@ -1,21 +1,24 @@
 import { useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { RoomCard } from '@/components/rooms/RoomCard';
-import { mockRooms } from '@/data/mockData';
+import { useRooms } from '@/hooks/useRooms';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
-import { RoomStatus } from '@/types';
+import { Loader2 } from 'lucide-react';
+
+type RoomStatus = 'available' | 'occupied' | 'reserved' | 'cleaning';
 
 const Rooms = () => {
   const [filterStatus, setFilterStatus] = useState<RoomStatus | 'all'>('all');
   const [filterType, setFilterType] = useState<string>('all');
+  const { data: rooms, isLoading, error } = useRooms();
 
-  const filteredRooms = mockRooms.filter((room) => {
+  const filteredRooms = rooms?.filter((room) => {
     if (filterStatus !== 'all' && room.status !== filterStatus) return false;
     if (filterType !== 'all' && room.type !== filterType) return false;
     return true;
-  });
+  }) ?? [];
 
   const roomTypes = ['all', 'single', 'double', 'suite', 'deluxe'];
   const statusFilters: (RoomStatus | 'all')[] = ['all', 'available', 'occupied', 'reserved', 'cleaning'];
@@ -87,10 +90,33 @@ const Rooms = () => {
 
         {/* Rooms Grid */}
         <div className="container px-4 py-12">
-          {filteredRooms.length > 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : error ? (
+            <div className="py-20 text-center">
+              <p className="text-lg text-destructive">Failed to load rooms</p>
+            </div>
+          ) : filteredRooms.length > 0 ? (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {filteredRooms.map((room, index) => (
-                <RoomCard key={room.id} room={room} index={index} />
+                <RoomCard 
+                  key={room.id} 
+                  room={{
+                    id: room.id,
+                    name: room.name,
+                    type: room.type,
+                    pricePerNight: Number(room.price_per_night),
+                    description: room.description || '',
+                    amenities: room.amenities,
+                    images: room.images,
+                    status: room.status,
+                    capacity: room.capacity,
+                    floor: room.floor,
+                  }} 
+                  index={index} 
+                />
               ))}
             </div>
           ) : (

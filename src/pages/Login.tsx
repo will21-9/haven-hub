@@ -1,71 +1,65 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
-import { UserRole } from '@/types';
 import { motion } from 'framer-motion';
-import { Building2, User, Shield, Users } from 'lucide-react';
+import { Building2, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { signIn, signUp } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [selectedRole, setSelectedRole] = useState<UserRole>('guest');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
 
-  const roles: { role: UserRole; label: string; icon: typeof User; description: string }[] = [
-    {
-      role: 'guest',
-      label: 'Guest',
-      icon: User,
-      description: 'Book rooms and manage your stays',
-    },
-    {
-      role: 'receptionist',
-      label: 'Receptionist',
-      icon: Users,
-      description: 'Manage bookings and check-ins',
-    },
-    {
-      role: 'owner',
-      label: 'Owner',
-      icon: Shield,
-      description: 'Full access to all features',
-    },
-  ];
-
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const success = await login(email, password, selectedRole);
-      if (success) {
-        toast({
-          title: 'Welcome back!',
-          description: `Logged in as ${selectedRole}`,
-        });
-        switch (selectedRole) {
-          case 'owner':
-            navigate('/owner');
-            break;
-          case 'receptionist':
-            navigate('/receptionist');
-            break;
-          default:
-            navigate('/rooms');
+      if (isSignUp) {
+        const { error } = await signUp(email, password, firstName, lastName);
+        if (error) {
+          toast({
+            title: 'Sign up failed',
+            description: error.message || 'Please try again.',
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: 'Account created!',
+            description: 'You are now logged in.',
+          });
+          navigate('/rooms');
+        }
+      } else {
+        const { error } = await signIn(email, password);
+        if (error) {
+          toast({
+            title: 'Login failed',
+            description: error.message || 'Please check your credentials.',
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: 'Welcome back!',
+            description: 'You are now logged in.',
+          });
+          navigate('/rooms');
         }
       }
     } catch (error) {
       toast({
-        title: 'Login failed',
-        description: 'Please check your credentials and try again.',
+        title: 'Error',
+        description: 'Something went wrong. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -85,84 +79,69 @@ const Login = () => {
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-xl bg-primary">
               <Building2 className="h-8 w-8 text-primary-foreground" />
             </div>
-            <h1 className="font-display text-3xl font-bold">Welcome Back</h1>
+            <h1 className="font-display text-3xl font-bold">
+              {isSignUp ? 'Create Account' : 'Welcome Back'}
+            </h1>
             <p className="mt-2 text-muted-foreground">
-              Sign in to access your dashboard
+              {isSignUp ? 'Sign up to book your stay' : 'Sign in to access your dashboard'}
             </p>
           </div>
 
           <Card variant="elevated">
             <CardHeader>
-              <CardTitle>Sign In</CardTitle>
+              <CardTitle>{isSignUp ? 'Sign Up' : 'Sign In'}</CardTitle>
               <CardDescription>
-                Choose your role and enter your credentials
+                {isSignUp ? 'Create your account to get started' : 'Enter your credentials to continue'}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleLogin} className="space-y-6">
-                {/* Role Selection */}
-                <div className="space-y-3">
-                  <Label>Select Role</Label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {roles.map(({ role, label, icon: Icon }) => (
-                      <button
-                        key={role}
-                        type="button"
-                        onClick={() => setSelectedRole(role)}
-                        className={`flex flex-col items-center rounded-lg border-2 p-3 transition-all ${
-                          selectedRole === role
-                            ? 'border-primary bg-primary/10'
-                            : 'border-border hover:border-primary/50'
-                        }`}
-                      >
-                        <Icon
-                          className={`h-6 w-6 ${
-                            selectedRole === role
-                              ? 'text-primary'
-                              : 'text-muted-foreground'
-                          }`}
-                        />
-                        <span
-                          className={`mt-1 text-sm font-medium ${
-                            selectedRole === role
-                              ? 'text-primary'
-                              : 'text-muted-foreground'
-                          }`}
-                        >
-                          {label}
-                        </span>
-                      </button>
-                    ))}
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {isSignUp && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="firstName">First Name</Label>
+                      <Input
+                        id="firstName"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        placeholder="John"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="lastName">Last Name</Label>
+                      <Input
+                        id="lastName"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        placeholder="Doe"
+                        required
+                      />
+                    </div>
                   </div>
-                  <p className="text-center text-sm text-muted-foreground">
-                    {roles.find((r) => r.role === selectedRole)?.description}
-                  </p>
+                )}
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    required
+                  />
                 </div>
-
-                {/* Credentials */}
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="your@email.com"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                    />
-                  </div>
+                <div>
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    minLength={6}
+                  />
                 </div>
 
                 <Button
@@ -171,14 +150,25 @@ const Login = () => {
                   size="lg"
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Signing in...' : 'Sign In'}
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {isSignUp ? 'Creating account...' : 'Signing in...'}
+                    </>
+                  ) : (
+                    isSignUp ? 'Create Account' : 'Sign In'
+                  )}
                 </Button>
               </form>
 
               <div className="mt-6 text-center">
-                <p className="text-sm text-muted-foreground">
-                  Demo credentials: Use any email/password
-                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsSignUp(!isSignUp)}
+                  className="text-sm text-primary hover:underline"
+                >
+                  {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+                </button>
               </div>
             </CardContent>
           </Card>

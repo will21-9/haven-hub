@@ -6,18 +6,18 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const Header = () => {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, role, signOut } = useAuth();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut();
     navigate('/');
   };
 
   const getDashboardLink = () => {
     if (!user) return '/login';
-    switch (user.role) {
+    switch (role) {
       case 'owner':
         return '/owner';
       case 'receptionist':
@@ -26,6 +26,8 @@ export const Header = () => {
         return '/rooms';
     }
   };
+
+  const displayName = user?.email?.split('@')[0] || 'User';
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
@@ -58,9 +60,9 @@ export const Header = () => {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 rounded-full bg-muted px-3 py-1.5">
                   <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{user?.name}</span>
+                  <span className="text-sm font-medium">{displayName}</span>
                   <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
-                    {user?.role}
+                    {role}
                   </span>
                 </div>
                 <Button variant="ghost" size="sm" onClick={handleLogout}>
