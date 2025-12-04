@@ -7,26 +7,41 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { AccessCodeDisplay } from '@/components/booking/AccessCodeDisplay';
-import { mockRooms, formatCurrency, generateAccessCode, calculateTotalPrice } from '@/data/mockData';
+import { useRoom } from '@/hooks/useRooms';
+import { useCreateBooking } from '@/hooks/useBookings';
+import { useCreateGuest } from '@/hooks/useGuests';
+import { usePaymentSettings, useCreatePaymentNotification } from '@/hooks/usePaymentSettings';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
-  Calendar,
   Users,
   Moon,
-  Wifi,
-  Wind,
-  Tv,
   Check,
   ChevronRight,
   CreditCard,
+  Loader2,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-GH', {
+    style: 'currency',
+    currency: 'GHS',
+  }).format(amount);
+};
+
+const generateAccessCode = () => {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
+};
 
 const BookRoom = () => {
   const { roomId } = useParams();
   const navigate = useNavigate();
-  const room = mockRooms.find((r) => r.id === roomId);
+  const { data: room, isLoading: roomLoading } = useRoom(roomId || '');
+  const { data: paymentSettings } = usePaymentSettings();
+  const createBooking = useCreateBooking();
+  const createGuest = useCreateGuest();
+  const createPaymentNotification = useCreatePaymentNotification();
 
   const [step, setStep] = useState(1);
   const [nights, setNights] = useState(1);
@@ -39,13 +54,24 @@ const BookRoom = () => {
   });
   const [bookingComplete, setBookingComplete] = useState(false);
   const [accessCode, setAccessCode] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const totalPrice = useMemo(
-    () => (room ? calculateTotalPrice(room.pricePerNight, nights) : 0),
+    () => (room ? room.price_per_night * nights : 0),
     [room, nights]
   );
 
   const nightOptions = [1, 2, 3, 4, 5, 6, 7];
+
+  if (roomLoading) {
+    return (
+      <Layout>
+        <div className="container flex min-h-[60vh] items-center justify-center px-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </Layout>
+    );
+  }
 
   if (!room) {
     return (
@@ -67,19 +93,69 @@ const BookRoom = () => {
     );
   }
 
-  const handleBooking = () => {
-    const code = generateAccessCode();
-    setAccessCode(code);
-    setBookingComplete(true);
-    toast({
-      title: 'Booking Confirmed!',
-      description: `Your access code is ${code}. Check your email for the receipt.`,
-    });
+  const handleBooking = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    try {
+      // Create guest record
+      const guestResult = await createGuest.mutateAsync({
+        first_name: guestInfo.firstName,
+        last_name: guestInfo.lastName,
+        email: guestInfo.email,
+        phone: guestInfo.phone,
+        id_number: guestInfo.idNumber,
+      });
+
+      const code = generateAccessCode();
+      const checkIn = new Date();
+      const checkOut = new Date();
+      checkOut.setDate(checkOut.getDate() + nights);
+
+      // Create booking
+      const bookingResult = await createBooking.mutateAsync({
+        room_id: room.id,
+        guest_id: guestResult.id,
+        check_in: checkIn.toISOString(),
+        check_out: checkOut.toISOString(),
+        nights,
+        total_amount: totalPrice,
+        access_code: code,
+      });
+
+      // Create payment notification
+      await createPaymentNotification.mutateAsync({
+        booking_id: bookingResult.id,
+        guest_name: `${guestInfo.firstName} ${guestInfo.lastName}`,
+        phone_number: guestInfo.phone,
+        amount: totalPrice,
+      });
+
+      setAccessCode(code);
+      setBookingComplete(true);
+      toast({
+        title: 'Booking Confirmed!',
+        description: `Your access code is ${code}. Please complete payment to activate.`,
+      });
+    } catch (error) {
+      console.error('Booking error:', error);
+      toast({
+        title: 'Booking Failed',
+        description: 'There was an error processing your booking. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const checkInDate = new Date();
   const checkOutDate = new Date();
   checkOutDate.setDate(checkOutDate.getDate() + nights);
+
+  const roomImages = room.images && room.images.length > 0 
+    ? room.images 
+    : ['https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800'];
 
   if (bookingComplete) {
     return (
@@ -110,10 +186,25 @@ const BookRoom = () => {
                 checkOut={checkOutDate}
               />
 
+              {paymentSettings && (
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold text-primary mb-2">Payment Instructions</h3>
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Please send payment via {paymentSettings.payment_provider} to:
+                    </p>
+                    <div className="bg-background rounded-lg p-3 space-y-1">
+                      <p className="font-mono text-lg font-bold">{paymentSettings.payment_account_number}</p>
+                      <p className="text-sm text-muted-foreground">{paymentSettings.payment_account_name}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Total Paid</span>
+                    <span className="text-muted-foreground">Total to Pay</span>
                     <span className="text-xl font-bold text-success">
                       {formatCurrency(totalPrice)}
                     </span>
@@ -155,14 +246,14 @@ const BookRoom = () => {
               <Card variant="room" className="mb-6 overflow-hidden">
                 <div className="relative aspect-[16/9]">
                   <img
-                    src={room.images[0]}
+                    src={roomImages[0]}
                     alt={room.name}
                     className="h-full w-full object-cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 to-transparent" />
                   <div className="absolute bottom-4 left-4 right-4">
                     <Badge variant="available" className="mb-2">
-                      Available
+                      {room.status === 'available' ? 'Available' : room.status}
                     </Badge>
                     <h1 className="font-display text-3xl font-bold text-primary-foreground">
                       {room.name}
@@ -174,7 +265,7 @@ const BookRoom = () => {
                 </div>
                 <CardContent className="p-4">
                   <div className="flex flex-wrap gap-2">
-                    {room.amenities.map((amenity) => (
+                    {room.amenities?.map((amenity) => (
                       <Badge key={amenity} variant="outline">
                         {amenity}
                       </Badge>
@@ -226,7 +317,7 @@ const BookRoom = () => {
                           <div className="flex items-center justify-between">
                             <span>
                               {nights} {nights === 1 ? 'Night' : 'Nights'} ×{' '}
-                              {formatCurrency(room.pricePerNight)}
+                              {formatCurrency(room.price_per_night)}
                             </span>
                             <span className="text-xl font-bold">
                               {formatCurrency(totalPrice)}
@@ -419,11 +510,24 @@ const BookRoom = () => {
                           </div>
                         </div>
 
+                        {paymentSettings && (
+                          <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4">
+                            <h3 className="font-semibold text-primary mb-2">Payment via {paymentSettings.payment_provider}</h3>
+                            <div className="bg-background rounded-lg p-3 space-y-1">
+                              <p className="font-mono text-lg font-bold">{paymentSettings.payment_account_number}</p>
+                              <p className="text-sm text-muted-foreground">{paymentSettings.payment_account_name}</p>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              After booking, send payment to this number and your booking will be confirmed.
+                            </p>
+                          </div>
+                        )}
+
                         <div className="rounded-lg bg-muted/50 p-4">
                           <p className="text-sm text-muted-foreground">
-                            By clicking "Pay Now", you agree to our terms and
+                            By clicking "Confirm Booking", you agree to our terms and
                             conditions. A digital receipt and access code will be
-                            sent to your email.
+                            generated for you.
                           </p>
                         </div>
 
@@ -436,8 +540,16 @@ const BookRoom = () => {
                             className="flex-1"
                             size="lg"
                             onClick={handleBooking}
+                            disabled={isSubmitting}
                           >
-                            Pay {formatCurrency(totalPrice)}
+                            {isSubmitting ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Processing...
+                              </>
+                            ) : (
+                              `Confirm Booking - ${formatCurrency(totalPrice)}`
+                            )}
                           </Button>
                         </div>
                       </CardContent>
@@ -456,7 +568,7 @@ const BookRoom = () => {
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-3">
                     <img
-                      src={room.images[0]}
+                      src={roomImages[0]}
                       alt={room.name}
                       className="h-16 w-16 rounded-lg object-cover"
                     />
@@ -470,7 +582,7 @@ const BookRoom = () => {
                   <div className="border-t border-border pt-4">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">
-                        {formatCurrency(room.pricePerNight)} × {nights}{' '}
+                        {formatCurrency(room.price_per_night)} × {nights}{' '}
                         {nights === 1 ? 'night' : 'nights'}
                       </span>
                       <span>{formatCurrency(totalPrice)}</span>
