@@ -55,7 +55,13 @@ export const useCreatePaymentNotification = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (notification: Omit<PaymentNotification, 'id' | 'is_confirmed' | 'confirmed_by' | 'confirmed_at' | 'created_at'>) => {
+    mutationFn: async (notification: {
+      booking_id: string;
+      guest_name: string;
+      phone_number: string;
+      amount: number;
+      transaction_reference?: string | null;
+    }) => {
       const { data, error } = await supabase
         .from('payment_notifications')
         .insert(notification)
