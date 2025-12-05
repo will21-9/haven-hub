@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -9,16 +9,47 @@ import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
 import { Building2, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, isAuthenticated, role } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+
+  // Redirect based on role when authenticated
+  useEffect(() => {
+    if (isAuthenticated && role) {
+      if (role === 'owner') {
+        navigate('/owner');
+      } else if (role === 'receptionist') {
+        navigate('/receptionist');
+      } else {
+        navigate('/rooms');
+      }
+    }
+  }, [isAuthenticated, role, navigate]);
+
+  const navigateBasedOnRole = async (userId: string) => {
+    // Fetch the user's role
+    const { data } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (data?.role === 'owner') {
+      navigate('/owner');
+    } else if (data?.role === 'receptionist') {
+      navigate('/receptionist');
+    } else {
+      navigate('/rooms');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +69,7 @@ const Login = () => {
             title: 'Account created!',
             description: 'You are now logged in.',
           });
+          // New users are guests by default
           navigate('/rooms');
         }
       } else {
@@ -53,7 +85,11 @@ const Login = () => {
             title: 'Welcome back!',
             description: 'You are now logged in.',
           });
-          navigate('/rooms');
+          // Get current user and navigate based on role
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            await navigateBasedOnRole(user.id);
+          }
         }
       }
     } catch (error) {

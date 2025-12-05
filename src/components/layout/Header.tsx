@@ -51,19 +51,23 @@ export const Header = () => {
           </Link>
           {isAuthenticated ? (
             <>
-              <Link
-                to={getDashboardLink()}
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Dashboard
-              </Link>
+              {(role === 'owner' || role === 'receptionist') && (
+                <Link
+                  to={getDashboardLink()}
+                  className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Dashboard
+                </Link>
+              )}
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 rounded-full bg-muted px-3 py-1.5">
                   <User className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-medium">{displayName}</span>
-                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
-                    {role}
-                  </span>
+                  {(role === 'owner' || role === 'receptionist') && (
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                      {role}
+                    </span>
+                  )}
                 </div>
                 <Button variant="ghost" size="sm" onClick={handleLogout}>
                   <LogOut className="h-4 w-4" />
@@ -114,13 +118,15 @@ export const Header = () => {
               </Link>
               {isAuthenticated ? (
                 <>
-                  <Link
-                    to={getDashboardLink()}
-                    className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Dashboard
-                  </Link>
+                  {(role === 'owner' || role === 'receptionist') && (
+                    <Link
+                      to={getDashboardLink()}
+                      className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Dashboard
+                    </Link>
+                  )}
                   <button
                     onClick={() => {
                       handleLogout();

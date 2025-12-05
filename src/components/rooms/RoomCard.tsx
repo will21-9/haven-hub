@@ -6,13 +6,17 @@ import { formatCurrency } from '@/data/mockData';
 import { Users, Wifi, Wind, Tv, Moon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface RoomCardProps {
   room: Room;
   index?: number;
+  showStatus?: boolean;
 }
 
-export const RoomCard = ({ room, index = 0 }: RoomCardProps) => {
+export const RoomCard = ({ room, index = 0, showStatus = false }: RoomCardProps) => {
+  const { role } = useAuth();
+  const isStaff = role === 'owner' || role === 'receptionist';
   const getStatusBadge = () => {
     switch (room.status) {
       case 'available':
@@ -48,7 +52,7 @@ export const RoomCard = ({ room, index = 0 }: RoomCardProps) => {
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 to-transparent" />
-          <div className="absolute right-3 top-3">{getStatusBadge()}</div>
+          {(showStatus || isStaff) && <div className="absolute right-3 top-3">{getStatusBadge()}</div>}
           <div className="absolute bottom-3 left-3 right-3">
             <h3 className="font-display text-xl font-semibold text-primary-foreground">
               {room.name}
