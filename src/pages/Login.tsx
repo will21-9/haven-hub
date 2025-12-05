@@ -21,6 +21,23 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
 
+  // Clear any stale session on mount to prevent "Failed to fetch" errors
+  useEffect(() => {
+    const clearStaleSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          // Clear any stale tokens from localStorage
+          await supabase.auth.signOut();
+        }
+      } catch (error) {
+        // If there's an error, sign out to clear any corrupted state
+        await supabase.auth.signOut();
+      }
+    };
+    clearStaleSession();
+  }, []);
+
   // Redirect based on role when authenticated
   useEffect(() => {
     if (isAuthenticated && role) {
@@ -56,6 +73,9 @@ const Login = () => {
     setIsLoading(true);
 
     try {
+      // Clear any stale session before attempting login
+      await supabase.auth.signOut();
+      
       if (isSignUp) {
         const { error } = await signUp(email, password, firstName, lastName);
         if (error) {
@@ -75,9 +95,12 @@ const Login = () => {
       } else {
         const { error } = await signIn(email, password);
         if (error) {
+          const errorMessage = error.message?.includes('fetch') 
+            ? 'Network error. Please check your connection and try again.'
+            : error.message || 'Please check your credentials.';
           toast({
             title: 'Login failed',
-            description: error.message || 'Please check your credentials.',
+            description: errorMessage,
             variant: 'destructive',
           });
         } else {
@@ -92,10 +115,13 @@ const Login = () => {
           }
         }
       }
-    } catch (error) {
+    } catch (error: any) {
+      const errorMessage = error?.message?.includes('fetch') 
+        ? 'Network error. Please check your connection and try again.'
+        : 'Something went wrong. Please try again.';
       toast({
         title: 'Error',
-        description: 'Something went wrong. Please try again.',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
