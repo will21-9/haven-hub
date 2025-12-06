@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { RoomCard } from '@/components/rooms/RoomCard';
 import { useRooms } from '@/hooks/useRooms';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
@@ -13,9 +14,12 @@ const Rooms = () => {
   const [filterStatus, setFilterStatus] = useState<RoomStatus | 'all'>('all');
   const [filterType, setFilterType] = useState<string>('all');
   const { data: rooms, isLoading, error } = useRooms();
+  const { role } = useAuth();
+  const isStaff = role === 'owner' || role === 'receptionist';
 
   const filteredRooms = rooms?.filter((room) => {
-    if (filterStatus !== 'all' && room.status !== filterStatus) return false;
+    // Staff can filter by status, guests only see rooms filtered by type
+    if (isStaff && filterStatus !== 'all' && room.status !== filterStatus) return false;
     if (filterType !== 'all' && room.type !== filterType) return false;
     return true;
   }) ?? [];
@@ -64,26 +68,28 @@ const Rooms = () => {
                 ))}
               </div>
 
-              {/* Status Filter */}
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium text-muted-foreground">Status:</span>
-                {statusFilters.map((status) => (
-                  <Badge
-                    key={status}
-                    variant={
-                      filterStatus === status
-                        ? status === 'all'
-                          ? 'default'
-                          : status
-                        : 'outline'
-                    }
-                    className="cursor-pointer capitalize transition-all hover:scale-105"
-                    onClick={() => setFilterStatus(status)}
-                  >
-                    {status}
-                  </Badge>
-                ))}
-              </div>
+              {/* Status Filter - Only visible to staff */}
+              {isStaff && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground">Status:</span>
+                  {statusFilters.map((status) => (
+                    <Badge
+                      key={status}
+                      variant={
+                        filterStatus === status
+                          ? status === 'all'
+                            ? 'default'
+                            : status
+                          : 'outline'
+                      }
+                      className="cursor-pointer capitalize transition-all hover:scale-105"
+                      onClick={() => setFilterStatus(status)}
+                    >
+                      {status}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
