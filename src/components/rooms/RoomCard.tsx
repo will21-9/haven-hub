@@ -95,18 +95,17 @@ export const RoomCard = ({ room, index = 0, showStatus = false }: RoomCardProps)
                 <span>per night</span>
               </div>
             </div>
-            <Button
-              size="sm"
-              variant={room.status === 'available' ? 'default' : 'outline'}
-              disabled={room.status !== 'available'}
-              asChild={room.status === 'available'}
-            >
-              {room.status === 'available' ? (
+            {room.status === 'available' ? (
+              <Button size="sm" variant="default" asChild>
                 <Link to={`/book/${room.id}`}>Book Now</Link>
-              ) : (
-                <span>Unavailable</span>
-              )}
-            </Button>
+              </Button>
+            ) : (
+              // For guests: don't show why it's unavailable, just that they can't book
+              // For staff: the status badge already shows the reason
+              <Button size="sm" variant="outline" disabled>
+                {isStaff ? 'Unavailable' : 'Not Available'}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
