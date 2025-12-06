@@ -30,8 +30,9 @@ const navItems: NavItem[] = [
   { label: 'Bookings', href: '/bookings', icon: CalendarCheck },
   { label: 'Payments', href: '/payments', icon: CreditCard },
   { label: 'Alerts', href: '/alerts', icon: Bell },
+  { label: 'Access Control', href: '/access-control', icon: Shield },
   { label: 'Revenue', href: '/revenue', icon: BarChart3, ownerOnly: true },
-  { label: 'Access Control', href: '/access-control', icon: Shield, ownerOnly: true },
+  { label: 'Staff', href: '/staff', icon: Users, ownerOnly: true },
   { label: 'Add Room', href: '/add-room', icon: PlusCircle, ownerOnly: true },
 ];
 

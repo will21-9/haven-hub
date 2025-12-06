@@ -23,6 +23,7 @@ import OwnerDashboard from "./pages/owner/OwnerDashboard";
 import AccessControl from "./pages/owner/AccessControl";
 import Revenue from "./pages/owner/Revenue";
 import AddRoom from "./pages/owner/AddRoom";
+import StaffManagement from "./pages/owner/StaffManagement";
 import Payments from "./pages/receptionist/Payments";
 
 const queryClient = new QueryClient();
@@ -106,6 +107,14 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/receptionist/access-control"
+        element={
+          <ProtectedRoute allowedRoles={['receptionist', 'owner']}>
+            <AccessControl />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Owner Routes */}
       <Route
@@ -185,6 +194,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={['owner']}>
             <Payments />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/owner/staff"
+        element={
+          <ProtectedRoute allowedRoles={['owner']}>
+            <StaffManagement />
           </ProtectedRoute>
         }
       />
